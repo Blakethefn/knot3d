@@ -38,6 +38,10 @@ def build_all(pd_code: list[list[int]], config: PipelineConfig | None = None) ->
 
     pipeline = config or PipelineConfig()
     normalization = normalize_pd_code(pd_code, pipeline.pd, pipeline.search)
+    if not normalization.normalized_pd:
+        link = Link([])
+        return BuildArtifacts(normalization=normalization, link=link, manifold=link.exterior())
+
     link = build_link(normalization.normalized_pd)
     if len(link.link_components) != 1:
         raise KnotBuildError("Only single-component knots are supported")

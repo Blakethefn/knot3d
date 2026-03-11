@@ -124,7 +124,7 @@ def parse_pd_input(value: str | Path | list[list[int]] | tuple[tuple[int, ...], 
 def _read_path(path: Path) -> Any:
     """Read a PD payload from a text or JSON file."""
 
-    text = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8-sig")
     if path.suffix.lower() == ".json":
         payload = json.loads(text)
         if isinstance(payload, dict) and "pd_code" in payload:
