@@ -9,7 +9,7 @@ description = "Topology-first knot analysis and unknotting engine for planar dia
 readme = "README.md"
 requires-python = ">=3.13"
 license = {text = "MIT"}
-authors = [{name = "Codex"}]
+authors = [{name = "Blake Paulson"}]
 
 [tool.setuptools]
 package-dir = {"" = "."}
