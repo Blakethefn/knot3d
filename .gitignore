@@ -1,4 +1,32 @@
-blueprints/
-DECISIONS.md
+# Virtual environments
 venv/
 .venv/
+env/
+
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables
+.env
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Project-specific
+blueprints/
+DECISIONS.md
+out/
+tests/
