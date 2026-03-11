@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.figure import Figure
 
 from src.layout_2d import build_crossing_graph
 from src.utils import ensure_parent_dir
@@ -15,7 +15,8 @@ def render_diagram(pd_code: list[list[int]], path: str | Path) -> Path:
     """Render a simple graph-based 2D diagram preview."""
 
     target = ensure_parent_dir(path)
-    figure, axis = plt.subplots(figsize=(6, 6), dpi=180)
+    figure = Figure(figsize=(6, 6), dpi=180)
+    axis = figure.add_subplot(111)
     axis.set_axis_off()
 
     if not pd_code:
@@ -24,7 +25,6 @@ def render_diagram(pd_code: list[list[int]], path: str | Path) -> Path:
         axis.text(0.0, 0.0, "unknot", ha="center", va="center")
         figure.tight_layout()
         figure.savefig(target, bbox_inches="tight")
-        plt.close(figure)
         return target
 
     layout = build_crossing_graph(pd_code)
@@ -48,5 +48,4 @@ def render_diagram(pd_code: list[list[int]], path: str | Path) -> Path:
 
     figure.tight_layout()
     figure.savefig(target, bbox_inches="tight")
-    plt.close(figure)
     return target

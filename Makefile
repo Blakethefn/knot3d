@@ -1,4 +1,4 @@
-﻿.PHONY: discover test run analyze unknot mesh run-all clean
+.PHONY: discover test run analyze unknot mesh gui gui-offscreen test-gui run-all clean
 
 discover:
 	.\\.venv\\Scripts\\python.exe scripts\\discover_apis.py
@@ -14,6 +14,15 @@ unknot:
 
 mesh:
 	.\\.venv\\Scripts\\python.exe main.py --pd-file examples\\trefoil.json --analyze --export-mesh --out out\\trefoil_mesh
+
+gui:
+	.\\.venv\\Scripts\\python.exe gui_main.py
+
+gui-offscreen:
+	powershell -Command "$$env:QT_QPA_PLATFORM='offscreen'; $$env:PYVISTA_OFF_SCREEN='true'; .\\.venv\\Scripts\\python.exe gui_main.py"
+
+test-gui:
+	powershell -Command "$$env:QT_QPA_PLATFORM='offscreen'; $$env:PYVISTA_OFF_SCREEN='true'; .\\.venv\\Scripts\\python.exe -m pytest -v tests\\test_main_window.py tests\\test_gui_integration.py"
 
 run-all:
 	.\\.venv\\Scripts\\python.exe examples\\run_all.py

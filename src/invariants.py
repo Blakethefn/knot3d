@@ -59,10 +59,18 @@ _KNOWN_DT_NAMES = _dt_name_lookup()
 def _identify_name(link: Link, manifold: snappy.Manifold) -> tuple[str | None, list[str]]:
     """Infer a human-readable knot name from DT code or SnapPy identify()."""
 
-    manifold_idents = [str(item) for item in manifold.identify()]
     dt_key = abs_dt_key(link.DT_code())
     if dt_key in _KNOWN_DT_NAMES:
+        try:
+            manifold_idents = [str(item) for item in manifold.identify()]
+        except Exception:
+            manifold_idents = []
         return _KNOWN_DT_NAMES[dt_key], manifold_idents
+
+    try:
+        manifold_idents = [str(item) for item in manifold.identify()]
+    except Exception:
+        manifold_idents = []
 
     for item in manifold_idents:
         bare = item.split("(")[0]
