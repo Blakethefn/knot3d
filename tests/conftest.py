@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import os
 import time
 from pathlib import Path
@@ -16,6 +17,7 @@ from src.gui.settings import apply_default_preferences
 from src.gui.state import SessionState
 from src.pd_conventions import normalize_pd_code
 from src.pd_parser import parse_pd_input
+from src.services.compute_policy import ComputePreferences
 from src.services import RecentFilesStore, SessionStore
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -101,6 +103,18 @@ class FakeEngineFacade:
         self.delay_seconds = delay_seconds
         self.calls: list[str] = []
         self.fail_mode: str | None = None
+        self.compute_preferences = ComputePreferences()
+        logical_cpus = max(1, os.cpu_count() or 1)
+        self.compute_runtime = {
+            "requested_backend": "auto",
+            "active_backend": "cpu",
+            "cpu_max_usage_percent": 100,
+            "cpu_thread_limit": logical_cpus,
+            "logical_cpu_count": logical_cpus,
+            "gpu_max_usage_percent": 100,
+            "gpu_available": False,
+            "notes": (),
+        }
 
     def validate_pd(self, raw_text: str):
         self.calls.append("validate")
@@ -144,6 +158,28 @@ class FakeEngineFacade:
     def get_engine_versions(self):
         return {"engine": "fake"}
 
+    def update_compute_preferences(self, preferences: ComputePreferences):
+        self.compute_preferences = preferences
+        logical_cpus = max(1, os.cpu_count() or 1)
+        thread_limit = max(1, math.ceil(logical_cpus * (preferences.cpu_max_usage_percent / 100.0)))
+        notes: tuple[str, ...] = ()
+        if preferences.backend == "gpu":
+            notes = ("Fake engine runs CPU-only and ignores GPU requests.",)
+        self.compute_runtime = {
+            "requested_backend": preferences.backend,
+            "active_backend": "cpu",
+            "cpu_max_usage_percent": preferences.cpu_max_usage_percent,
+            "cpu_thread_limit": thread_limit,
+            "logical_cpu_count": logical_cpus,
+            "gpu_max_usage_percent": preferences.gpu_max_usage_percent,
+            "gpu_available": False,
+            "notes": notes,
+        }
+        return self.compute_runtime
+
+    def get_compute_runtime(self):
+        return self.compute_runtime
+
     def _result(self, mode: str, pd_code, output_prefix, progress_callback=None):
         self.calls.append(mode)
         if self.fail_mode == mode:
@@ -171,15 +207,16 @@ class FakeEngineFacade:
         candidates = [
             {
                 "candidate_index": 0,
-                "crossing_indices": [0],
-                "determinant": 1,
-                "alexander_polynomial": "1",
+                "crossing_indices": [],
+                "determinant": 3,
+                "alexander_polynomial": "t^2 - t + 1",
                 "tau": 0,
-                "full_check_status": "full_check",
-                "is_unknot": True,
+                "seifert_genus": 1,
+                "full_check_status": "fast_filter",
+                "is_unknot": False,
                 "elapsed_time": 0.02,
-                "recognition_method": "simplify_to_empty",
-                "notes": ["fake candidate"],
+                "recognition_method": "fast_filter",
+                "notes": ["determinant = 3 != 1"],
                 "modified_pd": pd_code,
             }
         ]
@@ -187,15 +224,22 @@ class FakeEngineFacade:
             "knot_name": "3_1",
             "total_candidates": 1,
             "obstruction_lower_bound": 1,
-            "conclusion": "Unknotting number = 1.",
+            "obstruction_details": ["determinant = 3 != 1"],
+            "conclusion": "Rejected u(K)=0 by a nontrivial invariant.",
             "candidate_summaries": candidates,
-            "filter_stats": {"identified_as_unknot": 1},
-            "unknotting_changes": [{"crossing_indices": [0]}],
+            "filter_stats": {"rejected_by_invariants": 1, "proven_unknot": 0, "rejected_after_full_check": 0},
+            "unknotting_changes": [],
+            "upper_bound": None,
+            "is_unknot": False,
+            "recognition_method": "fast_filter",
         }
         return {
             "analysis": analysis,
             "unknotting": unknotting if mode == "unknotting_search" else None,
-            "crossing_changes": {"candidates": candidates, "filter_stats": {"identified_as_unknot": 1}}
+            "crossing_changes": {
+                "candidates": candidates,
+                "filter_stats": {"rejected_by_invariants": 1, "proven_unknot": 0, "rejected_after_full_check": 0},
+            }
             if mode == "unknotting_search"
             else {"candidates": [], "filter_stats": {}},
             "centerline": [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
@@ -305,6 +349,8 @@ def real_gui_window(qapp, qt_settings, tmp_path: Path):
         session_store=SessionStore(),
         recent_files=recent,
     )
+    controller.engine.analyze([[1, 5, 2, 4], [3, 1, 4, 6], [5, 3, 6, 2]], tmp_path / "_warmup")
+    controller.engine.clear_cache()
     window.controller = controller
     window.show()
     yield window

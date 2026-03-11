@@ -1,6 +1,6 @@
 # Knot Workbench
 
-Knot Workbench is a native Python desktop application and CLI for topology-first knot analysis from 1-indexed planar diagram (PD) codes. The same shared engine powers both entry points, so the CLI and GUI agree on parsing, normalization, invariants, unknotting search, and exports.
+Knot Workbench is a native Python desktop application and CLI for topology-first knot analysis from 1-indexed planar diagram (PD) codes. The same shared engine powers both entry points, so the CLI and GUI agree on parsing, normalization, invariants, unknot recognition, and exports.
 
 ## Architecture
 
@@ -26,23 +26,23 @@ The desktop layer is PySide6 widgets plus a docked workbench shell:
 - `PySide6` for the native window, menus, docks, dialogs, and persistence.
 - `pyvistaqt` / `pyvista` for the embedded 3D viewport in interactive mode.
 - `matplotlib` for the 2D diagram tab and comparison view.
-- `QThread` workers for analyze, unknotting, and mesh export jobs.
+- `QThread` workers for analyze, unknot recognition, and mesh export jobs.
 
 ## Features
 
 - Parse PD codes from JSON, Python literals, or files.
 - Normalize blueprint conventions into buildable Spherogram inputs.
 - Compute classical invariants, HFK-derived `tau` / `epsilon` / genus, and knot IDs when available.
-- Run a depth-1 unknotting search with exported candidate metadata for every tested crossing change.
+- Decide whether `u(K)=0` using fast invariant obstructions plus direct unknot recognition checks.
 - Inspect results in a desktop workbench with:
   - docked input, results, and log/progress panels
   - 2D diagram tab
   - 3D viewport tab
-  - crossing-candidate table and detail panel
+  - recognition-record table and detail panel
   - comparison tab
   - raw JSON tab
 - Save and reload workbench sessions.
-- Export analysis JSON, unknotting JSON, crossing-change JSON, diagram PNG, viewport PNG, centerline CSV, and mesh bundles.
+- Export analysis JSON, unknot-status JSON, recognition-record JSON, diagram PNG, viewport PNG, centerline CSV, and mesh bundles.
 
 ## Quick Start
 
@@ -52,7 +52,7 @@ CLI analyze:
 .\.venv\Scripts\python.exe main.py --pd-file examples\reference_11c.json --analyze --out out\reference
 ```
 
-CLI unknotting search:
+CLI unknot-status check:
 
 ```powershell
 .\.venv\Scripts\python.exe main.py --pd-file examples\trefoil.json --unknotting-search --out out\trefoil
@@ -85,11 +85,11 @@ $env:PYVISTA_OFF_SCREEN='true'
 1. Analyze a knot
    Paste or load a PD code, click `Validate`, then `Analyze`.
 
-2. Run unknotting search
-   Load `trefoil`, click `Unknotting Search`, and inspect the candidate table.
+2. Check whether `u(K)=0`
+   Load `trefoil`, click `Check Unknot`, and inspect the recognition record.
 
-3. Inspect crossing changes
-   Select a candidate row to highlight the crossing in the 2D/3D views and populate the comparison tab.
+3. Inspect the recognition trace
+   Select the recognition row to inspect the evidence and populate the comparison tab.
 
 4. Save and reload work
    Use `File -> Save Session` and `File -> Open Session`.
@@ -109,6 +109,7 @@ The workbench and CLI share the same naming convention:
 Example generated artifact paths:
 
 - `out/trefoil_analysis.json`
+- `out/trefoil_unknotting.json`
 - `out/trefoil_diagram.png`
 - `out/trefoil_3d.png`
 

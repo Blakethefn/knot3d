@@ -20,7 +20,7 @@ def is_unknot_pd(pd_input: str | Path | list[list[int]]) -> bool:
     parsed = parse_pd_input(pd_input)
     artifacts = build_all(parsed.to_list())
     classical = compute_classical_invariants(artifacts.link, artifacts.manifold)
-    hfk = compute_hfk(artifacts.normalization.normalized_pd, timeout=30.0)
+    hfk = compute_hfk(artifacts.normalization.normalized_pd)
     result = recognize_unknot(artifacts.normalization.normalized_pd, classical, hfk)
     return result.is_unknot
 

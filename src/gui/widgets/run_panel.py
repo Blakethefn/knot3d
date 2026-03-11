@@ -25,7 +25,7 @@ class RunPanelWidget(QtWidgets.QWidget):
 
         self.validate_button = QtWidgets.QPushButton("Validate")
         self.analyze_button = QtWidgets.QPushButton("Analyze")
-        self.unknot_button = QtWidgets.QPushButton("Unknotting Search")
+        self.unknot_button = QtWidgets.QPushButton("Check Unknot")
         self.mesh_button = QtWidgets.QPushButton("Export Mesh")
 
         for button in (

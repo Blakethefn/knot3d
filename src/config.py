@@ -30,7 +30,7 @@ class InvariantConfig:
     compute_tau: bool = True
     compute_epsilon: bool = True
     compute_seifert_genus: bool = True
-    hfk_timeout: float = 60.0
+    hfk_timeout: float | None = None
 
 
 @dataclass(frozen=True)

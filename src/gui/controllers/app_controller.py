@@ -6,6 +6,7 @@ from pathlib import Path
 
 from PySide6 import QtWidgets
 
+from src.gui import settings as gui_settings
 from src.gui.controllers.analysis_controller import AnalysisController
 from src.gui.controllers.crossing_controller import CrossingController
 from src.gui.controllers.export_controller import ExportController
@@ -39,6 +40,7 @@ class AppController:
         self.export_service = export_service or ExportService()
         self.session_store = session_store or SessionStore()
         self.recent_files = recent_files or RecentFilesStore()
+        self._apply_compute_preferences(log_to_ui=False)
 
         self.analysis = AnalysisController(window, self.state, self.engine, settings, use_threads=use_threads)
         self.crossings = CrossingController(window, self.state, self.engine)
@@ -99,7 +101,8 @@ class AppController:
 
         dialog = PreferencesDialog(self.settings, self.window)
         if dialog.exec():
-            self.state.output_dir = Path(str(self.settings.value("preferences/default_output_dir", "out")))
+            self.state.output_dir = Path(str(self.settings.value(gui_settings.KEY_DEFAULT_OUTPUT_DIR, "out")))
+            self._apply_compute_preferences(log_to_ui=True)
 
     def show_session_info(self) -> None:
         """Open the session info dialog."""
@@ -155,3 +158,17 @@ class AppController:
         )
         if filename:
             self.sessions.load_pd_file(filename)
+
+    def _apply_compute_preferences(self, *, log_to_ui: bool) -> None:
+        """Apply persisted compute preferences to the active engine."""
+
+        runtime: dict[str, object] | None = None
+        if hasattr(self.engine, "update_compute_preferences"):
+            runtime = self.engine.update_compute_preferences(gui_settings.load_compute_preferences(self.settings))
+        elif hasattr(self.engine, "get_compute_runtime"):
+            runtime = self.engine.get_compute_runtime()
+
+        self.window.status_widget.set_compute_runtime(runtime)
+        if log_to_ui and runtime is not None:
+            summary = self.window.status_widget.compute_label.text().replace("Compute: ", "", 1)
+            self.window.log_console.append_log(f"Compute preferences updated: {summary}.")

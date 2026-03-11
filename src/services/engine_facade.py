@@ -29,6 +29,7 @@ from src.knot_builder import build_all
 from src.mesh_export import export_centerline_csv, export_meshes
 from src.pd_conventions import normalize_pd_code
 from src.pd_parser import PDParseError, parse_pd_input
+from src.services.compute_policy import ComputePreferences, apply_compute_runtime, resolve_compute_runtime
 from src.unknot_recognizer import recognize_unknot
 from src.unknotting_search import search_unknotting_number_one
 from src.utils import as_jsonable, canonical_pd_key, ensure_dir, write_json
@@ -132,7 +133,7 @@ def execute_pipeline(
     unknotting_payload = None
     crossing_changes_payload = None
     if "unknotting_search" in selected_modes:
-        _report_progress(progress_callback, "Running unknotting search", 60)
+        _report_progress(progress_callback, "Checking unknot status", 60)
         unknotting = search_unknotting_number_one(artifacts.normalization.normalized_pd, classical, hfk, pipeline)
         unknotting_payload = unknotting.to_dict()
         crossing_changes_payload = {
@@ -177,9 +178,27 @@ def execute_pipeline(
 class EngineFacade:
     """Thin reusable bridge from the GUI to the shared topology engine."""
 
-    def __init__(self, config: PipelineConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: PipelineConfig | None = None,
+        compute_preferences: ComputePreferences | None = None,
+    ) -> None:
         self.config = config or PipelineConfig()
+        self.compute_preferences = compute_preferences or ComputePreferences()
+        self._last_compute_runtime = resolve_compute_runtime(self.compute_preferences)
         self._cache: dict[tuple[Any, ...], dict[str, Any]] = {}
+
+    def update_compute_preferences(self, preferences: ComputePreferences) -> dict[str, Any]:
+        """Update the active compute preferences."""
+
+        self.compute_preferences = preferences
+        self._last_compute_runtime = resolve_compute_runtime(preferences)
+        return self.get_compute_runtime()
+
+    def get_compute_runtime(self) -> dict[str, Any]:
+        """Return the resolved compute runtime for the active preferences."""
+
+        return self._last_compute_runtime.to_dict()
 
     def validate_pd(self, raw_text: str) -> ValidationResult:
         """Parse, validate, and normalize a PD code."""
@@ -238,13 +257,16 @@ class EngineFacade:
     ) -> dict[str, Any]:
         """Build preview data for a single crossing-change candidate."""
 
-        normalized = normalize_pd_code(pd_code, self.config.pd, self.config.search).normalized_pd
-        modified_pd = apply_crossing_changes(normalized, (crossing_idx,))
-        artifacts = build_all(modified_pd, self.config)
-        classical = compute_classical_invariants(artifacts.link, artifacts.manifold)
-        hfk = compute_hfk(artifacts.normalization.normalized_pd, timeout=self.config.invariants.hfk_timeout)
-        recognition = recognize_unknot(artifacts.normalization.normalized_pd, classical, hfk, self.config.search)
-        embedding = build_embedding(artifacts.normalization.normalized_pd, self.config.viz)
+        runtime = resolve_compute_runtime(self.compute_preferences)
+        self._last_compute_runtime = runtime
+        with apply_compute_runtime(runtime):
+            normalized = normalize_pd_code(pd_code, self.config.pd, self.config.search).normalized_pd
+            modified_pd = apply_crossing_changes(normalized, (crossing_idx,))
+            artifacts = build_all(modified_pd, self.config)
+            classical = compute_classical_invariants(artifacts.link, artifacts.manifold)
+            hfk = compute_hfk(artifacts.normalization.normalized_pd, timeout=self.config.invariants.hfk_timeout)
+            recognition = recognize_unknot(artifacts.normalization.normalized_pd, classical, hfk, self.config.search)
+            embedding = build_embedding(artifacts.normalization.normalized_pd, self.config.viz)
         return {
             "crossing_index": crossing_idx,
             "original_pd": normalized,
@@ -282,16 +304,23 @@ class EngineFacade:
         modes: set[str],
         progress_callback: ProgressCallback | None,
     ) -> dict[str, Any]:
+        runtime = resolve_compute_runtime(self.compute_preferences)
+        self._last_compute_runtime = runtime
         normalized = normalize_pd_code(pd_code, self.config.pd, self.config.search).normalized_pd
         cache_key = (canonical_pd_key(normalized), tuple(sorted(modes)))
         if cache_key in self._cache:
             cached = copy.deepcopy(self._cache[cache_key])
             output_files = build_output_paths(output_prefix)
             cached["output_files"] = output_files
+            cached["compute_runtime"] = runtime.to_dict()
             return cached
 
-        result = execute_pipeline(normalized, output_prefix, self.config, modes, progress_callback)
-        self._cache[cache_key] = copy.deepcopy(result)
+        with apply_compute_runtime(runtime):
+            result = execute_pipeline(normalized, output_prefix, self.config, modes, progress_callback)
+        result["compute_runtime"] = runtime.to_dict()
+        cached_result = copy.deepcopy(result)
+        cached_result.pop("compute_runtime", None)
+        self._cache[cache_key] = cached_result
         return result
 
     def clear_cache(self) -> None:

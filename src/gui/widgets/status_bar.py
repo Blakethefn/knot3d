@@ -18,10 +18,12 @@ class StatusBarWidget(QtWidgets.QWidget):
         self.progress_label = QtWidgets.QLabel("Ready")
         self.crossing_label = QtWidgets.QLabel("Selected crossing: none")
         self.engine_label = QtWidgets.QLabel("Engine: idle")
+        self.compute_label = QtWidgets.QLabel("Compute: CPU | 100%")
         layout.addWidget(self.session_label)
         layout.addWidget(self.progress_label)
         layout.addWidget(self.crossing_label)
         layout.addWidget(self.engine_label)
+        layout.addWidget(self.compute_label)
 
     def set_session(self, path: Path | None) -> None:
         """Update the session path text."""
@@ -43,3 +45,19 @@ class StatusBarWidget(QtWidgets.QWidget):
         """Update the engine state text."""
 
         self.engine_label.setText(f"Engine: {text}")
+
+    def set_compute_runtime(self, runtime: dict[str, object] | None) -> None:
+        """Update the compute runtime summary."""
+
+        if runtime is None:
+            self.compute_label.setText("Compute: CPU | 100%")
+            return
+
+        active_backend = str(runtime.get("active_backend", "cpu")).upper()
+        cpu_percent = int(runtime.get("cpu_max_usage_percent", 100))
+        cpu_threads = int(runtime.get("cpu_thread_limit", 1))
+        logical_cpus = int(runtime.get("logical_cpu_count", cpu_threads))
+        summary = f"Compute: {active_backend} | CPU {cpu_percent}% ({cpu_threads}/{logical_cpus})"
+        if str(runtime.get("requested_backend", "auto")) == "gpu" and not bool(runtime.get("gpu_available", False)):
+            summary += " | GPU fallback"
+        self.compute_label.setText(summary)

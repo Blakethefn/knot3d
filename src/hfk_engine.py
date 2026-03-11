@@ -1,4 +1,4 @@
-﻿"""Knot Floer homology wrapper with timeout support."""
+"""Knot Floer homology wrapper with optional timeout support."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def discover_hfk_api() -> dict[str, list[str]]:
     }
 
 
-def compute_hfk(pd_code: list[list[int]], timeout: float = 60.0) -> HFKResult:
+def compute_hfk(pd_code: list[list[int]], timeout: float | None = None) -> HFKResult:
     """Compute HFK data from a PD code using the runtime-discovered API."""
 
     if not pd_code:
@@ -62,7 +62,7 @@ def compute_hfk(pd_code: list[list[int]], timeout: float = 60.0) -> HFKResult:
     with ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(knot_floer_homology.pd_to_hfk, pd_code)
         try:
-            result = future.result(timeout=timeout)
+            result = future.result() if timeout is None else future.result(timeout=timeout)
         except FutureTimeoutError:
             future.cancel()
             return HFKResult(

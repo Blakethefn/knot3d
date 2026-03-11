@@ -34,11 +34,20 @@ def quick_filter(classical: InvariantReport, hfk: HFKResult | None) -> Recogniti
         reasons.append(f"determinant = {classical.determinant} != 1")
     if classical.alexander_polynomial != "1":
         reasons.append(f"Alexander polynomial = {classical.alexander_polynomial} != 1")
+    if classical.signature != 0:
+        reasons.append(f"signature = {classical.signature} != 0")
     if hfk is not None and hfk.available:
         if hfk.tau not in (None, 0):
             reasons.append(f"tau = {hfk.tau} != 0")
+        if hfk.epsilon not in (None, 0):
+            reasons.append(f"epsilon = {hfk.epsilon} != 0")
         if hfk.seifert_genus not in (None, 0):
             reasons.append(f"Seifert genus = {hfk.seifert_genus} != 0")
+        if hfk.total_rank not in (None, 1):
+            reasons.append(f"HFK total rank = {hfk.total_rank} != 1")
+        normalized_ranks = hfk.ranks or {}
+        if normalized_ranks and normalized_ranks != {"0,0": 1}:
+            reasons.append(f"HFK ranks = {normalized_ranks} != {{'0,0': 1}}")
 
     if reasons:
         return RecognitionResult(

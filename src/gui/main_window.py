@@ -49,7 +49,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.action_validate = QtGui.QAction("Validate", self)
         self.action_analyze = QtGui.QAction("Analyze", self)
-        self.action_unknot = QtGui.QAction("Unknotting Search", self)
+        self.action_unknot = QtGui.QAction("Check Unknot", self)
         self.action_export_mesh = QtGui.QAction("Export Mesh", self)
         self.action_cancel = QtGui.QAction("Cancel Active Job", self)
         self.action_cancel.setEnabled(False)
