@@ -8,13 +8,17 @@ from pathlib import Path
 from time import perf_counter
 
 from src.config import PipelineConfig
+from src.embedding_3d import build_embedding
 from src.hfk_engine import compute_hfk
 from src.invariants import compute_classical_invariants
 from src.knot_builder import build_all
 from src.logging_setup import configure_logging
+from src.mesh_export import export_centerline_csv, export_meshes
 from src.pd_parser import parse_pd_input
 from src.unknotting_search import search_unknotting_number_one
 from src.utils import ensure_dir, write_json
+from src.viz_matplotlib import render_diagram
+from src.viz_pyvista import render_3d_preview
 
 LOGGER = logging.getLogger(__name__)
 
@@ -89,9 +93,20 @@ def run_pipeline(
             {"candidates": unknotting_payload["unknotting_changes"], "filter_stats": unknotting_payload["filter_stats"]},
         )
 
+    render_diagram(artifacts.normalization.normalized_pd, prefix.with_name(prefix.name + "_diagram.png"))
+    embedding = build_embedding(artifacts.normalization.normalized_pd, pipeline.viz)
+    export_centerline_csv(embedding.centerline, prefix.with_name(prefix.name + "_centerline.csv"))
+    preview_path = render_3d_preview(embedding.centerline, prefix, pipeline.viz)
+
+    mesh_outputs = None
+    if "export_mesh" in selected_modes:
+        mesh_outputs = export_meshes(artifacts.normalization.normalized_pd, prefix)
+
     return {
         "analysis": analysis_payload,
         "unknotting": unknotting_payload,
+        "preview_3d": str(preview_path),
+        "mesh_outputs": mesh_outputs,
     }
 
 
