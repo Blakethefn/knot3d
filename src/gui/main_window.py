@@ -68,6 +68,7 @@ class MainWindow(QtWidgets.QMainWindow):
             "figure_eight": QtGui.QAction("Figure-Eight", self),
             "cinquefoil": QtGui.QAction("Cinquefoil", self),
             "reference_11c": QtGui.QAction("Reference 11-Crossing", self),
+            "hundred_crossing": QtGui.QAction("100-Crossing Example", self),
             "unknot": QtGui.QAction("Unknot", self),
         }
         self.action_exit.triggered.connect(self.close)
@@ -204,10 +205,17 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.analysis_summary)
         layout.addWidget(splitter, 1)
         layout.addWidget(export_box)
+        container.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Preferred)
+
+        scroll = QtWidgets.QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(container)
 
         self.results_dock = QtWidgets.QDockWidget("Results", self)
         self.results_dock.setObjectName("resultsDock")
-        self.results_dock.setWidget(container)
+        self.results_dock.setMinimumWidth(300)
+        self.results_dock.setWidget(scroll)
         self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.results_dock)
 
     def _build_bottom_dock(self) -> None:
@@ -277,6 +285,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.input_dock)
         self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.results_dock)
         self.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.bottom_dock)
+        self.resizeDocks([self.input_dock, self.results_dock], [360, 380], QtCore.Qt.Orientation.Horizontal)
         self.workspace_tabs.setCurrentIndex(0)
 
     def reset_for_new_session(self) -> None:

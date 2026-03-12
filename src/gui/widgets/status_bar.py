@@ -58,6 +58,9 @@ class StatusBarWidget(QtWidgets.QWidget):
         cpu_threads = int(runtime.get("cpu_thread_limit", 1))
         logical_cpus = int(runtime.get("logical_cpu_count", cpu_threads))
         summary = f"Compute: {active_backend} | CPU {cpu_percent}% ({cpu_threads}/{logical_cpus})"
-        if str(runtime.get("requested_backend", "auto")) == "gpu" and not bool(runtime.get("gpu_available", False)):
-            summary += " | GPU fallback"
+        if str(runtime.get("active_backend", "cpu")) == "gpu":
+            gpu_percent = int(runtime.get("gpu_max_usage_percent", 100))
+            summary += f" | GPU {gpu_percent}%"
+        elif str(runtime.get("requested_backend", "cpu")) == "gpu" and not bool(runtime.get("gpu_available", False)):
+            summary += " | GPU unavailable"
         self.compute_label.setText(summary)

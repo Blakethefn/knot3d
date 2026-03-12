@@ -51,15 +51,18 @@ def test_facade_reuses_engine_modules(monkeypatch, trefoil_pd, tmp_path):
     assert result["analysis"]["knot_name"] == "3_1"
 
 
-def test_compute_preferences_resolve_cpu_fallback(trefoil_pd, tmp_path):
+def test_compute_preferences_resolve_gpu_request(trefoil_pd, tmp_path):
     facade = EngineFacade()
     runtime = facade.update_compute_preferences(
         ComputePreferences.from_values(backend="gpu", cpu_max_usage_percent=40, gpu_max_usage_percent=60)
     )
     expected_threads = max(1, math.ceil((os.cpu_count() or 1) * 0.4))
     assert runtime["requested_backend"] == "gpu"
-    assert runtime["active_backend"] == "cpu"
-    assert runtime["gpu_available"] is False
+    # active_backend depends on whether GPUs are detected on this machine
+    if runtime["gpu_available"]:
+        assert runtime["active_backend"] == "gpu"
+    else:
+        assert runtime["active_backend"] == "cpu"
     assert runtime["cpu_thread_limit"] == expected_threads
 
     result = facade.analyze(trefoil_pd, tmp_path / "trefoil_gpu_pref")

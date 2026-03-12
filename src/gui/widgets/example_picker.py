@@ -31,7 +31,7 @@ class ExamplePickerWidget(QtWidgets.QWidget):
         self.load_button.clicked.connect(self.load_current)
 
     def _load_examples(self) -> None:
-        preferred_order = ["trefoil", "figure_eight", "cinquefoil", "reference_11c", "unknot"]
+        preferred_order = ["trefoil", "figure_eight", "cinquefoil", "reference_11c", "hundred_crossing", "unknot"]
         for name in preferred_order:
             candidate = self.examples_dir / f"{name}.json"
             if candidate.exists():

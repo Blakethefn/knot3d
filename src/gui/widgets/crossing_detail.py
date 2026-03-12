@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 
 class CrossingDetailWidget(QtWidgets.QGroupBox):
@@ -15,6 +15,8 @@ class CrossingDetailWidget(QtWidgets.QGroupBox):
         self.summary_label.setWordWrap(True)
         self.notes = QtWidgets.QPlainTextEdit()
         self.notes.setReadOnly(True)
+        self.notes.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.WidgetWidth)
+        self.notes.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.notes.setMaximumBlockCount(200)
         layout.addWidget(self.summary_label)
         layout.addWidget(self.notes, 1)

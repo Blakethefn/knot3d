@@ -106,13 +106,14 @@ class AnalysisController(QtCore.QObject):
         request = RunRequest(mode=mode, pd_code=self.state.pd_code, output_prefix=str(output_prefix))
         if mode == "unknotting_search":
             worker = UnknottingWorker(self.engine, request)
-            label = "Unknotting Search"
+            label = "Check Unknot"
         elif mode == "export_mesh":
             worker = MeshWorker(self.engine, request)
             label = "Export Mesh"
         else:
             worker = AnalysisWorker(self.engine, request)
             label = "Analyze"
+        self.window.progress_panel.start_job(label, self._planned_stages(mode))
         if not self.use_threads:
             self._run_sync(mode, request, label)
             return
@@ -172,6 +173,7 @@ class AnalysisController(QtCore.QObject):
         if mode == "export_mesh":
             self.state.export_history.append({"kind": "mesh", "paths": result.get("mesh_outputs", {})})
             self.window.log_console.append_log("Mesh export completed.")
+            self.window.progress_panel.mark_finished("Mesh export completed")
             self.result_ready.emit(mode, result)
             return
 
@@ -213,20 +215,48 @@ class AnalysisController(QtCore.QObject):
         self.window.status_widget.set_engine_state("ready")
         self.window.status_widget.set_progress("Ready")
         self.window.log_console.append_log("Run completed successfully.")
+        self.window.progress_panel.mark_finished("Completed")
 
     def _on_error(self, mode: str, error_text: str) -> None:
         self.window.log_console.append_log(f"{mode} failed:\n{error_text}")
         self.window.status_widget.set_engine_state("error")
         self.window.status_widget.set_progress("Error")
+        self.window.progress_panel.mark_failed("Failed")
         self.error_occurred.emit(error_text)
 
     def _on_cancelled(self, mode: str) -> None:
         self.window.log_console.append_log(f"{mode} cancelled.")
         self.window.status_widget.set_engine_state("cancelled")
         self.window.status_widget.set_progress("Cancelled")
+        self.window.progress_panel.mark_cancelled("Cancelled")
 
     def _on_finished(self, mode: str) -> None:
         self._set_busy(False)
         self._active_thread = None
         self._active_worker = None
         self._active_mode = None
+
+    def _planned_stages(self, mode: str) -> list[str]:
+        stages = [
+            "Parsing PD code",
+            "Building topology objects",
+            "Computing classical invariants",
+        ]
+        compute_hfk = True
+        engine_config = getattr(self.engine, "config", None)
+        if engine_config is not None:
+            compute_hfk = bool(getattr(getattr(engine_config, "invariants", None), "compute_hfk", True))
+        if compute_hfk:
+            stages.append("Computing knot Floer homology")
+        if mode == "unknotting_search":
+            stages.append("Checking unknot status")
+        stages.extend(
+            [
+                "Rendering diagram",
+                "Building 3D embedding",
+            ]
+        )
+        if mode == "export_mesh":
+            stages.append("Exporting mesh bundle")
+        stages.append("Completed")
+        return stages

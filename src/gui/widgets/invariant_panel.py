@@ -23,8 +23,10 @@ class InvariantPanelWidget(QtWidgets.QGroupBox):
         self._labels: dict[str, QtWidgets.QLabel] = {}
         layout = QtWidgets.QFormLayout(self)
         for key, title in self.FIELDS:
-            label = QtWidgets.QLabel("—")
+            label = QtWidgets.QLabel("--")
+            label.setWordWrap(True)
             label.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
+            label.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
             self._labels[key] = label
             layout.addRow(title, label)
 
@@ -32,7 +34,7 @@ class InvariantPanelWidget(QtWidgets.QGroupBox):
         """Reset all values."""
 
         for label in self._labels.values():
-            label.setText("—")
+            label.setText("--")
 
     def set_payload(self, analysis_result: dict | None) -> None:
         """Populate values from an analysis payload."""
@@ -43,13 +45,13 @@ class InvariantPanelWidget(QtWidgets.QGroupBox):
         invariants = analysis_result.get("invariants", {})
         hfk = analysis_result.get("hfk") or {}
         values = {
-            "crossing_number": invariants.get("crossing_number", "—"),
-            "determinant": invariants.get("determinant", "—"),
-            "signature": invariants.get("signature", "—"),
-            "alexander_polynomial": invariants.get("alexander_polynomial", "—"),
-            "tau": hfk.get("tau", "—"),
-            "epsilon": hfk.get("epsilon", "—"),
-            "seifert_genus": hfk.get("seifert_genus", "—"),
+            "crossing_number": invariants.get("crossing_number", "--"),
+            "determinant": invariants.get("determinant", "--"),
+            "signature": invariants.get("signature", "--"),
+            "alexander_polynomial": invariants.get("alexander_polynomial", "--"),
+            "tau": hfk.get("tau", "--"),
+            "epsilon": hfk.get("epsilon", "--"),
+            "seifert_genus": hfk.get("seifert_genus", "--"),
         }
         for key, value in values.items():
             self._labels[key].setText(str(value))

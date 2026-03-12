@@ -20,9 +20,18 @@ def test_actions_exist(gui_window):
     assert gui_window.action_export_mesh is not None
 
 
+def test_results_dock_uses_scroll_area(gui_window):
+    assert isinstance(gui_window.results_dock.widget(), QtWidgets.QScrollArea)
+
+
 def test_load_example_updates_editor(gui_window):
     gui_window.example_picker.select_example("trefoil")
     assert "[1, 5, 2, 4]" in gui_window.pd_editor.text()
+
+
+def test_load_hundred_crossing_example_updates_editor(gui_window):
+    gui_window.example_picker.select_example("hundred_crossing")
+    assert "[135, 3, 136, 2]" in gui_window.pd_editor.text()
 
 
 def test_validate_action_updates_status(gui_window):
@@ -51,3 +60,8 @@ def test_close_prompts_on_dirty_session(gui_window, monkeypatch):
     event = QtGui.QCloseEvent()
     gui_window.closeEvent(event)
     assert event.isAccepted() is False
+
+
+def test_result_labels_wrap_long_content(gui_window):
+    assert gui_window.analysis_summary.conclusion_label.wordWrap() is True
+    assert gui_window.invariant_panel._labels["alexander_polynomial"].wordWrap() is True

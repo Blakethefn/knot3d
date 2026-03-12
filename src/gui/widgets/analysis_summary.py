@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 
 class AnalysisSummaryWidget(QtWidgets.QGroupBox):
@@ -12,10 +12,15 @@ class AnalysisSummaryWidget(QtWidgets.QGroupBox):
         super().__init__("Summary", parent)
         layout = QtWidgets.QVBoxLayout(self)
         self.knot_name_label = QtWidgets.QLabel("Knot: --")
+        self.knot_name_label.setWordWrap(True)
         self.convention_label = QtWidgets.QLabel("Convention: --")
+        self.convention_label.setWordWrap(True)
         self.conclusion_label = QtWidgets.QLabel("Conclusion: --")
+        self.conclusion_label.setWordWrap(True)
         self.metadata = QtWidgets.QPlainTextEdit()
         self.metadata.setReadOnly(True)
+        self.metadata.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.WidgetWidth)
+        self.metadata.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.metadata.setMaximumBlockCount(200)
         layout.addWidget(self.knot_name_label)
         layout.addWidget(self.convention_label)

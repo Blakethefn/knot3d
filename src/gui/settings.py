@@ -19,6 +19,7 @@ KEY_SCREENSHOT_HEIGHT = "preferences/screenshot_height"
 KEY_AUTO_LOAD_SCENE = "preferences/auto_load_scene"
 KEY_PRESERVE_LAYOUT = "preferences/preserve_layout"
 KEY_COMPUTE_BACKEND = "preferences/compute_backend"
+KEY_COMPUTE_DEVICE = "preferences/compute_device"
 KEY_CPU_MAX_USAGE = "preferences/cpu_max_usage"
 KEY_GPU_MAX_USAGE = "preferences/gpu_max_usage"
 KEY_WINDOW_GEOMETRY = "window/geometry"
@@ -35,7 +36,8 @@ def default_preferences() -> dict[str, object]:
         KEY_SCREENSHOT_HEIGHT: 1000,
         KEY_AUTO_LOAD_SCENE: True,
         KEY_PRESERVE_LAYOUT: True,
-        KEY_COMPUTE_BACKEND: "auto",
+        KEY_COMPUTE_BACKEND: "cpu",
+        KEY_COMPUTE_DEVICE: "cpu",
         KEY_CPU_MAX_USAGE: 100,
         KEY_GPU_MAX_USAGE: 100,
     }

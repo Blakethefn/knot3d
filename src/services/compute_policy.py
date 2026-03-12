@@ -83,22 +83,94 @@ class ComputeRuntime:
         return base
 
 
+def _detect_gpus_wmi() -> list[dict[str, str]]:
+    """Detect GPUs on Windows via WMI (no extra packages needed)."""
+
+    import subprocess
+    devices: list[dict[str, str]] = []
+    try:
+        result = subprocess.run(
+            ["wmic", "path", "win32_VideoController", "get", "name"],
+            capture_output=True, text=True, timeout=5,
+        )
+        for line in result.stdout.splitlines():
+            name = line.strip()
+            if not name or name.lower() == "name":
+                continue
+            # Skip virtual/remote display adapters
+            lower = name.lower()
+            if "virtual" in lower or "remote" in lower or "basic" in lower:
+                continue
+            devices.append({"id": f"gpu:{name}", "name": name})
+    except Exception:
+        pass
+    return devices
+
+
+def detect_gpu_devices() -> list[dict[str, str]]:
+    """Detect available GPU devices. Returns a list of dicts with 'id' and 'name' keys."""
+
+    devices: list[dict[str, str]] = []
+    # Try CUDA via torch
+    try:
+        import torch
+        if torch.cuda.is_available():
+            for i in range(torch.cuda.device_count()):
+                name = torch.cuda.get_device_name(i)
+                devices.append({"id": f"cuda:{i}", "name": name})
+    except ImportError:
+        pass
+    # Try OpenCL via pyopencl
+    if not devices:
+        try:
+            import pyopencl as cl
+            for platform in cl.get_platforms():
+                for dev in platform.get_devices(device_type=cl.device_type.GPU):
+                    devices.append({"id": f"opencl:{dev.name}", "name": dev.name.strip()})
+        except (ImportError, Exception):
+            pass
+    # Fallback: detect GPUs via OS-level queries (Windows WMI)
+    if not devices and os.name == "nt":
+        devices = _detect_gpus_wmi()
+    return devices
+
+
+def detect_compute_devices() -> list[dict[str, str]]:
+    """Return all available compute devices (CPU + any GPUs)."""
+
+    logical_cpu_count = max(1, os.cpu_count() or 1)
+    devices: list[dict[str, str]] = [
+        {"id": "cpu", "name": f"CPU ({logical_cpu_count} threads)"},
+    ]
+    devices.extend(detect_gpu_devices())
+    return devices
+
+
 def resolve_compute_runtime(preferences: ComputePreferences) -> ComputeRuntime:
     """Resolve a concrete runtime policy from persisted preferences."""
 
     logical_cpu_count = max(1, os.cpu_count() or 1)
     cpu_thread_limit = max(1, math.ceil(logical_cpu_count * (preferences.cpu_max_usage_percent / 100.0)))
-    gpu_available = False
+    gpu_devices = detect_gpu_devices()
+    gpu_available = len(gpu_devices) > 0
     notes: list[str] = []
 
     active_backend: ResolvedBackend = "cpu"
     if preferences.backend == "gpu":
-        notes.append(
-            "GPU compute was requested, but the current engine stack is CPU-only. "
-            "Runs will execute on the CPU."
-        )
+        if gpu_available:
+            active_backend = "gpu"
+            notes.append(f"GPU compute active — {len(gpu_devices)} device(s) detected.")
+        else:
+            notes.append(
+                "GPU compute was requested, but no GPU devices were detected. "
+                "Runs will execute on the CPU."
+            )
     elif preferences.backend == "auto":
-        notes.append("Auto backend resolved to CPU for the current engine stack.")
+        if gpu_available:
+            active_backend = "gpu"
+            notes.append("Auto backend resolved to GPU (GPU device detected).")
+        else:
+            notes.append("Auto backend resolved to CPU (no GPU devices detected).")
 
     if preferences.cpu_max_usage_percent < 100:
         notes.append(
