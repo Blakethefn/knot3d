@@ -200,7 +200,14 @@ class AnalysisController(QtCore.QObject):
         self.window.analysis_summary.set_results(analysis, unknotting)
         self.window.diagram_canvas.set_diagram(normalized_pd, self.state.selected_crossing_index)
         if bool(self.settings.value("preferences/auto_load_scene", True, bool)):
-            self.window.pyvista_view.load_centerline(result.get("centerline", []), len(normalized_pd))
+            self.window.pyvista_view.load_centerline(
+                result.get("centerline", []),
+                result.get("crossing_positions", []),
+                result.get("strand_segments", []),
+                result.get("tangents", []),
+                result.get("normals", []),
+                crossing_count=len(normalized_pd),
+            )
         self.window.set_raw_json_payloads(
             {
                 "analysis": analysis,

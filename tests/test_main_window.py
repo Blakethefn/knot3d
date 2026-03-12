@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from PySide6 import QtGui, QtTest, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 
 def test_window_constructs(gui_window):
     assert gui_window.windowTitle() == "Knot Workbench"
 
 
-def test_required_docks_exist(gui_window):
+def test_required_panels_exist(gui_window):
     assert gui_window.input_dock.windowTitle() == "Input"
-    assert gui_window.results_dock.windowTitle() == "Results"
     assert gui_window.bottom_dock.windowTitle() == "Progress / Logs"
+    assert isinstance(gui_window.centralWidget(), QtWidgets.QSplitter)
+    assert gui_window.workspace_splitter.count() == 3
 
 
 def test_actions_exist(gui_window):
@@ -20,8 +21,13 @@ def test_actions_exist(gui_window):
     assert gui_window.action_export_mesh is not None
 
 
-def test_results_dock_uses_scroll_area(gui_window):
-    assert isinstance(gui_window.results_dock.widget(), QtWidgets.QScrollArea)
+def test_inspector_uses_toolbox(gui_window):
+    assert isinstance(gui_window.inspector_toolbox, QtWidgets.QToolBox)
+    assert gui_window.inspector_toolbox.count() == 2
+
+
+def test_workspace_splitter_is_horizontal(gui_window):
+    assert gui_window.workspace_splitter.orientation() == QtCore.Qt.Orientation.Horizontal
 
 
 def test_load_example_updates_editor(gui_window):

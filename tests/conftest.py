@@ -153,7 +153,26 @@ class FakeEngineFacade:
         }
 
     def build_crossing_candidate_preview(self, pd_code, crossing_idx):
-        return {"crossing_index": crossing_idx, "modified_pd": pd_code}
+        return {
+            "crossing_index": crossing_idx,
+            "modified_pd": pd_code,
+            "centerline": [[0.0, 0.0, 0.0], [0.8, 0.2, 0.1], [1.2, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "crossing_positions": [[0.6, 0.0, 0.0]],
+            "strand_segments": [
+                {
+                    "index": 0,
+                    "component_index": 0,
+                    "start_crossing": 0,
+                    "start_slot": 1,
+                    "end_crossing": 0,
+                    "end_slot": 0,
+                    "points": [[0.0, 0.0, 0.0], [0.8, 0.2, 0.1], [1.2, 0.0, 0.0]],
+                }
+            ],
+            "strand_count": 1,
+            "tangents": [[1.0, 0.0, 0.0]] * 4,
+            "normals": [[0.0, 1.0, 0.0]] * 4,
+        }
 
     def get_engine_versions(self):
         return {"engine": "fake"}
@@ -242,7 +261,31 @@ class FakeEngineFacade:
             }
             if mode == "unknotting_search"
             else {"candidates": [], "filter_stats": {}},
-            "centerline": [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "centerline": [[0.0, 0.0, 0.0], [1.0, 0.2, 0.1], [2.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "crossing_positions": [[0.5, 0.0, 0.0], [1.5, 0.0, 0.0]],
+            "strand_segments": [
+                {
+                    "index": 0,
+                    "component_index": 0,
+                    "start_crossing": 0,
+                    "start_slot": 1,
+                    "end_crossing": 1,
+                    "end_slot": 0,
+                    "points": [[0.0, 0.0, 0.0], [0.8, 0.2, 0.1], [1.0, 0.0, 0.0]],
+                },
+                {
+                    "index": 1,
+                    "component_index": 0,
+                    "start_crossing": 1,
+                    "start_slot": 1,
+                    "end_crossing": 0,
+                    "end_slot": 0,
+                    "points": [[1.0, 0.0, 0.0], [1.6, -0.1, -0.1], [2.0, 0.0, 0.0]],
+                },
+            ],
+            "strand_count": 2,
+            "tangents": [[1.0, 0.0, 0.0]] * 4,
+            "normals": [[0.0, 1.0, 0.0]] * 4,
             "normalized_pd": pd_code,
             "output_files": {
                 "analysis_json": str(prefix.with_name(prefix.name + "_analysis.json")),
@@ -259,14 +302,25 @@ class FakePyVistaWidget(QtWidgets.QWidget):
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
         self._centerline = np.zeros((0, 3), dtype=float)
-        self._crossing_count = 0
+        self._crossing_positions = np.zeros((0, 3), dtype=float)
+        self._strand_segments = []
         self._highlight_index = None
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(QtWidgets.QLabel("Fake 3D View"))
 
-    def load_centerline(self, centerline, crossing_count: int = 0) -> None:
+    def load_centerline(
+        self,
+        centerline,
+        crossing_positions=None,
+        strand_segments=None,
+        tangents=None,
+        normals=None,
+        *,
+        crossing_count: int | None = None,
+    ) -> None:
         self._centerline = np.asarray(centerline, dtype=float)
-        self._crossing_count = crossing_count
+        self._crossing_positions = np.asarray(crossing_positions or [], dtype=float)
+        self._strand_segments = list(strand_segments or [])
 
     def highlight_crossing(self, crossing_index: int | None) -> None:
         self._highlight_index = crossing_index

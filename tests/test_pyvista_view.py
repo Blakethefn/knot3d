@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.embedding_3d import compute_centerline
+from src.embedding_3d import build_embedding, compute_centerline
 from src.gui.widgets.pyvista_view import PyVistaViewWidget
 
 
@@ -11,8 +11,16 @@ def test_widget_constructs_offscreen(qapp):
 
 def test_scene_loads_centerline(qapp, trefoil_pd):
     widget = PyVistaViewWidget()
-    widget.load_centerline(compute_centerline(trefoil_pd), crossing_count=len(trefoil_pd))
+    embedding = build_embedding(trefoil_pd)
+    widget.load_centerline(
+        embedding.centerline,
+        embedding.crossing_positions,
+        [{"index": segment.index, "points": segment.points.tolist()} for segment in embedding.strand_segments],
+        embedding.tangents,
+        embedding.normals,
+    )
     assert widget._tube_actor is not None
+    assert len(widget._crossing_positions) == len(trefoil_pd)
 
 
 def test_reset_camera(qapp, trefoil_pd):
@@ -25,13 +33,15 @@ def test_reset_camera(qapp, trefoil_pd):
 
 def test_highlight_crossing(qapp, trefoil_pd):
     widget = PyVistaViewWidget()
-    widget.load_centerline(compute_centerline(trefoil_pd), crossing_count=len(trefoil_pd))
+    embedding = build_embedding(trefoil_pd)
+    widget.load_centerline(embedding.centerline, embedding.crossing_positions, crossing_count=len(trefoil_pd))
     widget.highlight_crossing(1)
     assert widget._highlight_actor is not None
 
 
 def test_screenshot_export(qapp, trefoil_pd, tmp_path):
     widget = PyVistaViewWidget()
-    widget.load_centerline(compute_centerline(trefoil_pd), crossing_count=len(trefoil_pd))
+    embedding = build_embedding(trefoil_pd)
+    widget.load_centerline(embedding.centerline, embedding.crossing_positions, crossing_count=len(trefoil_pd))
     target = widget.export_screenshot(tmp_path / "shot.png")
     assert target.exists()

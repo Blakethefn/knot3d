@@ -33,7 +33,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.on_save_before_close = None
         self._raw_payloads: dict[str, dict | None] = {}
         self.setWindowTitle("Knot Workbench")
-        self.resize(1600, 980)
+        self.resize(1680, 980)
         self._build_actions()
         self._build_ui()
 
@@ -78,7 +78,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self._build_toolbar()
         self._build_central_workspace()
         self._build_input_dock()
-        self._build_results_dock()
         self._build_bottom_dock()
         self._build_status_bar()
         self.reset_layout()
@@ -137,11 +136,55 @@ class MainWindow(QtWidgets.QMainWindow):
         ):
             toolbar.addAction(action)
 
+    def _build_panel(self, title: str, widget: QtWidgets.QWidget) -> QtWidgets.QWidget:
+        container = QtWidgets.QFrame(self)
+        container.setObjectName("workspacePanel")
+        layout = QtWidgets.QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        header = QtWidgets.QLabel(title, container)
+        header.setObjectName("sectionTitle")
+        layout.addWidget(header)
+        layout.addWidget(widget, 1)
+        return container
+
     def _build_central_workspace(self) -> None:
-        self.workspace_tabs = QtWidgets.QTabWidget()
         self.pyvista_view = PyVistaViewWidget(self)
         self.diagram_canvas = DiagramCanvasWidget(self)
         self.comparison_view = ComparisonViewWidget(self)
+
+        self.invariant_panel = InvariantPanelWidget(self)
+        self.analysis_summary = AnalysisSummaryWidget(self)
+        self.crossing_table = CrossingTableWidget(self)
+        self.crossing_detail = CrossingDetailWidget(self)
+
+        export_box = QtWidgets.QGroupBox("Export Shortcuts", self)
+        export_layout = QtWidgets.QVBoxLayout(export_box)
+        self.export_results_button = QtWidgets.QPushButton("Export Results")
+        self.export_screenshot_button = QtWidgets.QPushButton("Export Screenshot")
+        self.export_session_button = QtWidgets.QPushButton("Save Session")
+        export_layout.addWidget(self.export_results_button)
+        export_layout.addWidget(self.export_screenshot_button)
+        export_layout.addWidget(self.export_session_button)
+
+        inspector_splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
+        inspector_splitter.addWidget(self.crossing_table)
+        inspector_splitter.addWidget(self.crossing_detail)
+        inspector_splitter.setStretchFactor(0, 2)
+        inspector_splitter.setStretchFactor(1, 1)
+
+        inspector_container = QtWidgets.QWidget(self)
+        inspector_layout = QtWidgets.QVBoxLayout(inspector_container)
+        inspector_layout.setContentsMargins(8, 8, 8, 8)
+        inspector_layout.addWidget(self.invariant_panel)
+        inspector_layout.addWidget(self.analysis_summary)
+        inspector_layout.addWidget(inspector_splitter, 1)
+        inspector_layout.addWidget(export_box)
+
+        inspector_scroll = QtWidgets.QScrollArea(self)
+        inspector_scroll.setWidgetResizable(True)
+        inspector_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        inspector_scroll.setWidget(inspector_container)
 
         self.raw_json_combo = QtWidgets.QComboBox()
         self.raw_json_combo.addItem("Analysis", "analysis")
@@ -149,18 +192,28 @@ class MainWindow(QtWidgets.QMainWindow):
         self.raw_json_combo.addItem("Crossing Changes", "crossing_changes")
         self.raw_json_view = QtWidgets.QPlainTextEdit()
         self.raw_json_view.setReadOnly(True)
-        raw_json_container = QtWidgets.QWidget()
-        raw_json_layout = QtWidgets.QVBoxLayout(raw_json_container)
-        raw_json_layout.setContentsMargins(0, 0, 0, 0)
-        raw_json_layout.addWidget(self.raw_json_combo)
-        raw_json_layout.addWidget(self.raw_json_view, 1)
         self.raw_json_combo.currentIndexChanged.connect(self._refresh_raw_json_view)
 
-        self.workspace_tabs.addTab(self.pyvista_view, "3D View")
-        self.workspace_tabs.addTab(self.diagram_canvas, "2D Diagram")
-        self.workspace_tabs.addTab(self.comparison_view, "Comparison")
-        self.workspace_tabs.addTab(raw_json_container, "Raw JSON")
-        self.setCentralWidget(self.workspace_tabs)
+        debug_panel = QtWidgets.QWidget(self)
+        debug_layout = QtWidgets.QVBoxLayout(debug_panel)
+        debug_layout.setContentsMargins(8, 8, 8, 8)
+        debug_layout.addWidget(self.raw_json_combo)
+        debug_layout.addWidget(self.raw_json_view, 1)
+        debug_layout.addWidget(self.comparison_view, 1)
+
+        self.inspector_toolbox = QtWidgets.QToolBox(self)
+        self.inspector_toolbox.addItem(inspector_scroll, "Inspector")
+        self.inspector_toolbox.addItem(debug_panel, "Developer / Debug")
+
+        self.workspace_splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal, self)
+        self.workspace_splitter.setChildrenCollapsible(False)
+        self.workspace_splitter.addWidget(self._build_panel("3D View", self.pyvista_view))
+        self.workspace_splitter.addWidget(self._build_panel("2D View", self.diagram_canvas))
+        self.workspace_splitter.addWidget(self._build_panel("Inspector", self.inspector_toolbox))
+        self.workspace_splitter.setStretchFactor(0, 5)
+        self.workspace_splitter.setStretchFactor(1, 4)
+        self.workspace_splitter.setStretchFactor(2, 3)
+        self.setCentralWidget(self.workspace_splitter)
 
     def _build_input_dock(self) -> None:
         self.example_picker = ExamplePickerWidget(parent=self)
@@ -177,46 +230,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.input_dock.setObjectName("inputDock")
         self.input_dock.setWidget(container)
         self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.input_dock)
-
-    def _build_results_dock(self) -> None:
-        self.invariant_panel = InvariantPanelWidget(self)
-        self.analysis_summary = AnalysisSummaryWidget(self)
-        self.crossing_table = CrossingTableWidget(self)
-        self.crossing_detail = CrossingDetailWidget(self)
-
-        export_box = QtWidgets.QGroupBox("Export Shortcuts", self)
-        export_layout = QtWidgets.QVBoxLayout(export_box)
-        self.export_results_button = QtWidgets.QPushButton("Export Results")
-        self.export_screenshot_button = QtWidgets.QPushButton("Export Screenshot")
-        self.export_session_button = QtWidgets.QPushButton("Save Session")
-        export_layout.addWidget(self.export_results_button)
-        export_layout.addWidget(self.export_screenshot_button)
-        export_layout.addWidget(self.export_session_button)
-
-        splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
-        splitter.addWidget(self.crossing_table)
-        splitter.addWidget(self.crossing_detail)
-        splitter.setStretchFactor(0, 2)
-        splitter.setStretchFactor(1, 1)
-
-        container = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(container)
-        layout.addWidget(self.invariant_panel)
-        layout.addWidget(self.analysis_summary)
-        layout.addWidget(splitter, 1)
-        layout.addWidget(export_box)
-        container.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Preferred)
-
-        scroll = QtWidgets.QScrollArea(self)
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setWidget(container)
-
-        self.results_dock = QtWidgets.QDockWidget("Results", self)
-        self.results_dock.setObjectName("resultsDock")
-        self.results_dock.setMinimumWidth(300)
-        self.results_dock.setWidget(scroll)
-        self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.results_dock)
 
     def _build_bottom_dock(self) -> None:
         self.progress_panel = ProgressPanelWidget(self)
@@ -244,7 +257,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.action_cancel.setEnabled(busy)
 
     def set_raw_json_payloads(self, payloads: dict[str, dict | None]) -> None:
-        """Update the raw JSON tab payloads."""
+        """Update the raw JSON developer panel payloads."""
 
         self._raw_payloads = payloads
         self._refresh_raw_json_view()
@@ -258,10 +271,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.raw_json_view.setPlainText(json.dumps(as_jsonable(payload), indent=2, sort_keys=True))
 
     def serialized_ui_state(self) -> dict[str, str]:
-        """Return a JSON-safe snapshot of active tab and window layout."""
+        """Return a JSON-safe snapshot of active splitter and window layout."""
 
         return {
-            "active_tab": str(self.workspace_tabs.currentIndex()),
+            "workspace_sizes": json.dumps(self.workspace_splitter.sizes()),
+            "toolbox_index": str(self.inspector_toolbox.currentIndex()),
             "window_geometry": bytes(self.saveGeometry().toBase64()).decode("ascii"),
             "dock_state": bytes(self.saveState().toBase64()).decode("ascii"),
         }
@@ -271,22 +285,25 @@ class MainWindow(QtWidgets.QMainWindow):
 
         geometry = ui_state.get("window_geometry")
         dock_state = ui_state.get("dock_state")
-        active_tab = ui_state.get("active_tab")
+        toolbox_index = ui_state.get("toolbox_index")
+        workspace_sizes = ui_state.get("workspace_sizes")
         if geometry:
             self.restoreGeometry(QtCore.QByteArray.fromBase64(geometry.encode("ascii")))
         if dock_state:
             self.restoreState(QtCore.QByteArray.fromBase64(dock_state.encode("ascii")))
-        if active_tab is not None:
-            self.workspace_tabs.setCurrentIndex(int(active_tab))
+        if workspace_sizes:
+            self.workspace_splitter.setSizes(json.loads(workspace_sizes))
+        if toolbox_index is not None:
+            self.inspector_toolbox.setCurrentIndex(int(toolbox_index))
 
     def reset_layout(self) -> None:
         """Restore the default dock arrangement."""
 
         self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.input_dock)
-        self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.results_dock)
         self.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.bottom_dock)
-        self.resizeDocks([self.input_dock, self.results_dock], [360, 380], QtCore.Qt.Orientation.Horizontal)
-        self.workspace_tabs.setCurrentIndex(0)
+        self.resizeDocks([self.input_dock], [360], QtCore.Qt.Orientation.Horizontal)
+        self.workspace_splitter.setSizes([760, 640, 420])
+        self.inspector_toolbox.setCurrentIndex(0)
 
     def reset_for_new_session(self) -> None:
         """Clear all widget state for a fresh session."""
@@ -300,7 +317,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.crossing_detail.set_candidate(None)
         self.comparison_view.clear_view()
         self.diagram_canvas.set_diagram([])
-        self.pyvista_view.load_centerline([], 0)
+        self.pyvista_view.load_centerline([], [], [], [], [])
         self.set_raw_json_payloads({})
         self.status_widget.set_session(None)
         self.status_widget.set_selected_crossing(None)

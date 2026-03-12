@@ -5,12 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
 from PySide6 import QtWidgets
 
-from src.layout_2d import build_crossing_graph
 from src.utils import ensure_parent_dir
+from src.viz_matplotlib import draw_diagram_axis
 
 
 def draw_pd_diagram(
@@ -19,32 +18,9 @@ def draw_pd_diagram(
     selected_crossing_index: int | None = None,
     title: str | None = None,
 ) -> None:
-    """Draw a simple PD graph with optional crossing highlight."""
+    """Draw a routed PD diagram with optional crossing highlight."""
 
-    axis.clear()
-    axis.set_axis_off()
-    if title:
-        axis.set_title(title)
-
-    if not pd_code:
-        theta = np.linspace(0.0, 2.0 * np.pi, 240)
-        axis.plot(np.cos(theta), np.sin(theta), color="#155e75", linewidth=2.4)
-        axis.text(0.0, 0.0, "unknot", ha="center", va="center")
-        return
-
-    layout = build_crossing_graph(pd_code)
-    for node in layout.graph.nodes:
-        x, y = layout.positions[node]
-        color = "#b42318" if node == selected_crossing_index else "#155e75"
-        axis.scatter([x], [y], s=220, color=color, zorder=3)
-        axis.text(x, y, str(node), color="white", ha="center", va="center", fontsize=9, zorder=4)
-
-    for (a, b) in layout.graph.edges:
-        xa, ya = layout.positions[a]
-        xb, yb = layout.positions[b]
-        axis.plot([xa, xb], [ya, yb], color="#475467", linewidth=1.5, alpha=0.9, zorder=1)
-        label = layout.edge_labels.get((a, b), layout.edge_labels.get((b, a), ""))
-        axis.text((xa + xb) / 2.0, (ya + yb) / 2.0, label, fontsize=7, color="#9a3412", zorder=2)
+    draw_diagram_axis(axis, pd_code, selected_crossing_index=selected_crossing_index, title=title)
 
 
 class DiagramCanvasWidget(QtWidgets.QWidget):

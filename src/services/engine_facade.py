@@ -78,6 +78,12 @@ def build_output_paths(output_prefix: str | Path) -> dict[str, str]:
     }
 
 
+def _serialize_strand_segments(segments) -> list[dict[str, Any]]:
+    """Convert embedding strand segments into JSON-friendly payloads."""
+
+    return [as_jsonable(asdict(segment)) for segment in segments]
+
+
 def execute_pipeline(
     pd_input: str | Path | list[list[int]] | tuple[tuple[int, ...], ...],
     output_prefix: str | Path,
@@ -152,6 +158,7 @@ def execute_pipeline(
     embedding = build_embedding(artifacts.normalization.normalized_pd, pipeline.viz)
     centerline_csv = export_centerline_csv(embedding.centerline, output_files["centerline_csv"])
     preview_path = render_3d_preview(embedding.centerline, prefix, pipeline.viz)
+    strand_segments = _serialize_strand_segments(embedding.strand_segments)
 
     mesh_outputs = None
     if "export_mesh" in selected_modes:
@@ -171,6 +178,11 @@ def execute_pipeline(
         "detected_convention": artifacts.normalization.detected_convention,
         "convention_notes": artifacts.normalization.notes,
         "centerline": embedding.centerline.tolist(),
+        "crossing_positions": embedding.crossing_positions.tolist(),
+        "strand_segments": strand_segments,
+        "strand_count": len(strand_segments),
+        "tangents": embedding.tangents.tolist(),
+        "normals": embedding.normals.tolist(),
         "output_files": output_files,
     }
 
@@ -267,6 +279,7 @@ class EngineFacade:
             hfk = compute_hfk(artifacts.normalization.normalized_pd, timeout=self.config.invariants.hfk_timeout)
             recognition = recognize_unknot(artifacts.normalization.normalized_pd, classical, hfk, self.config.search)
             embedding = build_embedding(artifacts.normalization.normalized_pd, self.config.viz)
+        strand_segments = _serialize_strand_segments(embedding.strand_segments)
         return {
             "crossing_index": crossing_idx,
             "original_pd": normalized,
@@ -278,6 +291,11 @@ class EngineFacade:
             },
             "recognition": recognition.to_dict(),
             "centerline": embedding.centerline.tolist(),
+            "crossing_positions": embedding.crossing_positions.tolist(),
+            "strand_segments": strand_segments,
+            "strand_count": len(strand_segments),
+            "tangents": embedding.tangents.tolist(),
+            "normals": embedding.normals.tolist(),
         }
 
     def get_engine_versions(self) -> dict[str, str]:

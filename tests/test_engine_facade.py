@@ -22,6 +22,10 @@ def test_analyze_returns_dict(trefoil_pd, tmp_path):
     result = facade.analyze(trefoil_pd, tmp_path / "trefoil")
     assert isinstance(result, dict)
     assert "analysis" in result
+    assert len(result["crossing_positions"]) == len(trefoil_pd)
+    assert result["strand_count"] == len(result["strand_segments"])
+    assert len(result["tangents"]) == len(result["centerline"])
+    assert len(result["normals"]) == len(result["centerline"])
 
 
 def test_unknotting_returns_dict(trefoil_pd, tmp_path):
